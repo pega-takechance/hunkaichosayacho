@@ -275,10 +275,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // -------------------------
-    // Export Excel
+    // State Management & Export
     // -------------------------
-    document.getElementById('export-excel-btn').addEventListener('click', () => {
-        // Collect Base Info
+    const collectData = () => {
         const dateVal = document.getElementById('form-date').value;
         const timeStart = document.getElementById('form-time-start').value;
         const timeEnd = document.getElementById('form-time-end').value;
@@ -287,7 +286,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const meshNo = document.getElementById('form-mesh').value;
         const impossible = document.querySelector('input[name="form-impossible"]:checked')?.value || "";
 
-        // Collect Area Data
         const areaData = [];
         document.querySelectorAll('.area-card').forEach(card => {
             const no = card.querySelector('.area-no').value;
@@ -295,12 +293,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const underVegGen = card.querySelector('input[name^="under-veg-general-"]:checked')?.value || "";
             const underVegSasa = card.querySelector('input[name^="under-veg-sasa-"]:checked')?.value || "";
             
-            // シカ生体
             const sSight = card.querySelector('.sika-sighting').value;
             const sFoot = card.querySelector('.sika-footprint').value;
             const sVoc = card.querySelector('.sika-vocal').value;
 
-            // 糞塊
             const doNew = card.querySelector('.dung-over-new').value;
             const doMed = card.querySelector('.dung-over-med').value;
             const doOld = card.querySelector('.dung-over-old').value;
@@ -311,28 +307,80 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const remark = card.querySelector('.remark').value;
 
-            // Only push if it has an area number
             if(no) {
                 areaData.push({
-                    "区域番号": no,
-                    "植生タイプ": veg,
-                    "下層植生(一般)": underVegGen,
-                    "下層植生(ササ)": underVegSasa,
-                    "生体:目撃": sSight,
-                    "生体:足跡": sFoot,
-                    "生体:鳴声": sVoc,
-                    "糞塊10+:新": doNew,
-                    "糞塊10+:中": doMed,
-                    "糞塊10+:旧": doOld,
-                    "糞塊10-:新": duNew,
-                    "糞塊10-:中": duMed,
-                    "糞塊10-:旧": duOld,
-                    "備考": remark
+                    "区域番号": no, "植生タイプ": veg, "下層植生(一般)": underVegGen, "下層植生(ササ)": underVegSasa,
+                    "生体:目撃": sSight, "生体:足跡": sFoot, "生体:鳴声": sVoc,
+                    "糞塊10+:新": doNew, "糞塊10+:中": doMed, "糞塊10+:旧": doOld,
+                    "糞塊10-:新": duNew, "糞塊10-:中": duMed, "糞塊10-:旧": duOld, "備考": remark
                 });
             }
         });
 
-        // Construct SheetJS array
+        return {
+            dateVal, timeStart, timeEnd, surveyor, weather, meshNo, impossible, areaData
+        };
+    };
+
+    const loadData = (data) => {
+        if (!data) return;
+        if (data.dateVal) document.getElementById('form-date').value = data.dateVal;
+        if (data.timeStart) document.getElementById('form-time-start').value = data.timeStart;
+        if (data.timeEnd) document.getElementById('form-time-end').value = data.timeEnd;
+        if (data.surveyor) document.getElementById('form-surveyor').value = data.surveyor;
+        if (data.weather) document.getElementById('form-weather').value = data.weather;
+        if (data.meshNo) document.getElementById('form-mesh').value = data.meshNo;
+        if (data.impossible) {
+            const imp = document.querySelectorAll('input[name="form-impossible"]');
+            imp.forEach(r => { if(r.value === data.impossible) r.checked = true; });
+        }
+
+        if (data.areaData && data.areaData.length > 0) {
+            areasContainer.innerHTML = '';
+            areaCount = 0;
+            data.areaData.forEach(a => {
+                createAreaCard();
+                const cards = document.querySelectorAll('.area-card');
+                const card = cards[cards.length - 1];
+                const idx = areaCount;
+
+                card.querySelector('.area-no').value = a["区域番号"] || String(idx);
+                
+                if (a["植生タイプ"]) {
+                    const vegs = a["植生タイプ"].split(', ');
+                    vegs.forEach(v => {
+                        const cb = card.querySelector(`.veg-cb[value="${v}"]`);
+                        if (cb) cb.checked = true;
+                    });
+                }
+                
+                const genReds = card.querySelectorAll(`input[name="under-veg-general-${idx}"]`);
+                genReds.forEach(r => { if(r.value === a["下層植生(一般)"]) r.checked = true; });
+
+                const sasReds = card.querySelectorAll(`input[name="under-veg-sasa-${idx}"]`);
+                sasReds.forEach(r => { if(r.value === a["下層植生(ササ)"]) r.checked = true; });
+
+                card.querySelector('.sika-sighting').value = a["生体:目撃"] || 0;
+                card.querySelector('.sika-footprint').value = a["生体:足跡"] || 0;
+                card.querySelector('.sika-vocal').value = a["生体:鳴声"] || 0;
+
+                card.querySelector('.dung-over-new').value = a["糞塊10+:新"] || 0;
+                card.querySelector('.dung-over-med').value = a["糞塊10+:中"] || 0;
+                card.querySelector('.dung-over-old').value = a["糞塊10+:旧"] || 0;
+
+                card.querySelector('.dung-under-new').value = a["糞塊10-:新"] || 0;
+                card.querySelector('.dung-under-med').value = a["糞塊10-:中"] || 0;
+                card.querySelector('.dung-under-old').value = a["糞塊10-:旧"] || 0;
+
+                card.querySelector('.remark').value = a["備考"] || "";
+            });
+            updateCount();
+        }
+    };
+
+    const doExportExcel = (dataObj) => {
+        const { dateVal, timeStart, timeEnd, surveyor, weather, meshNo, impossible, areaData } = dataObj;
+        
         const wsData = [
             {"A": "様式1-2 ニホンジカ糞塊密度調査票"},
             {},
@@ -344,83 +392,104 @@ document.addEventListener('DOMContentLoaded', () => {
             {"A": "調査不能箇所", "B": impossible},
             {},
             {
-                "A": "区域番号", 
-                "B": "植生タイプ", 
-                "C": "下層植生(一般)", 
-                "D": "下層植生(ササ)", 
-                "E": "生体:目撃",
-                "F": "生体:足跡",
-                "G": "生体:鳴声",
-                "H": "糞塊10+:新",
-                "I": "糞塊10+:中",
-                "J": "糞塊10+:旧",
-                "K": "糞塊10-:新",
-                "L": "糞塊10-:中",
-                "M": "糞塊10-:旧",
-                "N": "備考"
+                "A": "区域番号", "B": "植生タイプ", "C": "下層植生(一般)", "D": "下層植生(ササ)", 
+                "E": "生体:目撃", "F": "生体:足跡", "G": "生体:鳴声",
+                "H": "糞塊10+:新", "I": "糞塊10+:中", "J": "糞塊10+:旧",
+                "K": "糞塊10-:新", "L": "糞塊10-:中", "M": "糞塊10-:旧", "N": "備考"
             }
         ];
 
         areaData.forEach(a => {
             wsData.push({
-                "A": a["区域番号"],
-                "B": a["植生タイプ"],
-                "C": a["下層植生(一般)"],
-                "D": a["下層植生(ササ)"],
-                "E": a["生体:目撃"],
-                "F": a["生体:足跡"],
-                "G": a["生体:鳴声"],
-                "H": a["糞塊10+:新"],
-                "I": a["糞塊10+:中"],
-                "J": a["糞塊10+:旧"],
-                "K": a["糞塊10-:新"],
-                "L": a["糞塊10-:中"],
-                "M": a["糞塊10-:旧"],
-                "N": a["備考"]
+                "A": a["区域番号"], "B": a["植生タイプ"], "C": a["下層植生(一般)"], "D": a["下層植生(ササ)"],
+                "E": a["生体:目撃"], "F": a["生体:足跡"], "G": a["生体:鳴声"],
+                "H": a["糞塊10+:新"], "I": a["糞塊10+:中"], "J": a["糞塊10+:旧"],
+                "K": a["糞塊10-:新"], "L": a["糞塊10-:中"], "M": a["糞塊10-:旧"], "N": a["備考"]
             });
         });
 
-        // Create Workbook
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(wsData, {skipHeader: true});
         
-        // Define column widths for better Excel viewing
         ws['!cols'] = [
-            { wch: 10 }, // A: 区域番号
-            { wch: 15 }, // B: 植生タイプ
-            { wch: 15 }, // C: 下層植生(一般)
-            { wch: 15 }, // D: 下層植生(ササ)
-            { wch: 10 }, // E: 生体
-            { wch: 10 }, // F: 生体
-            { wch: 10 }, // G: 生体
-            { wch: 12 }, // H: 糞塊10+:新
-            { wch: 12 }, // I: 糞塊10+:中
-            { wch: 12 }, // J: 糞塊10+:旧
-            { wch: 12 }, // K: 糞塊10-:新
-            { wch: 12 }, // L: 糞塊10-:中
-            { wch: 12 }, // M: 糞塊10-:旧
-            { wch: 30 }  // N: 備考
+            { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
+            { wch: 10 }, { wch: 10 }, { wch: 10 },
+            { wch: 12 }, { wch: 12 }, { wch: 12 },
+            { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 30 }
         ];
 
         XLSX.utils.book_append_sheet(wb, ws, "ニホンジカ糞塊密度調査票");
 
-        // Export filename
         let filename = "糞塊密度調査_";
         if (dateVal) filename += dateVal.replace(/-/g, "");
         else filename += "未設定";
         filename += ".xlsx";
 
-        // Provide download
         XLSX.writeFile(wb, filename);
+    };
 
-        // Feedback
-        const btn = document.getElementById('export-excel-btn');
-        const originalHtml = btn.innerHTML;
-        btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> 出力完了`;
-        btn.classList.add('bg-emerald-100');
-        setTimeout(() => {
-            btn.innerHTML = originalHtml;
-            btn.classList.remove('bg-emerald-100');
-        }, 2000);
+    // -------------------------
+    // Save & Flow Actions
+    // -------------------------
+    document.getElementById('btn-suspend')?.addEventListener('click', () => {
+        const data = collectData();
+        localStorage.setItem('sikaSurveySave', JSON.stringify(data));
+        alert('データを保存して中断しました。\\n※ ブラウザを閉じても次回再開できます。');
+        window.location.reload();
     });
+
+    document.getElementById('btn-finish')?.addEventListener('click', () => {
+        const data = collectData();
+        doExportExcel(data);
+        localStorage.removeItem('sikaSurveySave');
+        setTimeout(() => {
+            if(confirm('調査を終了しました。新しい調査を始めますか？')) {
+                window.location.reload();
+            }
+        }, 1000);
+    });
+
+    // -------------------------
+    // Start Screen Logic
+    // -------------------------
+    const startScreen = document.getElementById('start-screen');
+    const mainApp = document.getElementById('main-app');
+    const resumeBtn = document.getElementById('btn-resume-survey');
+    const startBtn = document.getElementById('btn-start-survey');
+
+    if (startScreen && mainApp) {
+        const savedDataStr = localStorage.getItem('sikaSurveySave');
+        if (savedDataStr) {
+            resumeBtn.classList.remove('hidden');
+        }
+
+        const showMainApp = () => {
+            startScreen.style.opacity = '0';
+            setTimeout(() => {
+                startScreen.classList.add('hidden');
+                mainApp.classList.remove('hidden');
+                document.body.classList.remove('overflow-hidden');
+            }, 300);
+        };
+
+        startBtn.addEventListener('click', () => {
+            if(savedDataStr && !confirm('保存されている中断データを破棄して新規に開始しますか？')) {
+                return;
+            }
+            localStorage.removeItem('sikaSurveySave');
+            showMainApp();
+        });
+
+        resumeBtn.addEventListener('click', () => {
+            try {
+                const savedData = JSON.parse(savedDataStr);
+                loadData(savedData);
+                showMainApp();
+            } catch(e) {
+                console.error('Failed to load saved data:', e);
+                alert('データの読み込みに失敗しました。新規で開始します。');
+                showMainApp();
+            }
+        });
+    }
 });
