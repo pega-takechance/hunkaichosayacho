@@ -7,7 +7,8 @@ const ASSETS_TO_CACHE = [
   './style.css',
   './app.js',
   './manifest.json',
-  './icon.svg',
+  './icon.png',
+  './apple-touch-icon.png',
   'https://cdn.tailwindcss.com',
   'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js'
 ];
