@@ -18,15 +18,33 @@
     <!-- Start Screen -->
     <div id="start-screen" class="fixed inset-0 z-[100] bg-emerald-700 flex flex-col items-center justify-center text-white transition-opacity duration-300">
         <h1 class="text-4xl font-bold tracking-wider font-['Outfit'] mb-2">DeerSurveyPro</h1>
-        <p class="text-emerald-100 mb-12">ニホンジカ糞塊密度調査アプリ</p>
+        <p class="text-emerald-100 mb-8">ニホンジカ糞塊密度調査アプリ</p>
+
+        <div class="w-[85%] max-w-sm mb-6 flex flex-col gap-2 text-left">
+            <label class="text-xs font-bold text-emerald-100 flex items-center gap-1 pl-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg> 
+                調査する業務名
+            </label>
+            <select id="start-proj-select" class="w-full px-4 py-3 rounded-lg text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white shadow-lg">
+                <option value="NEW" class="text-emerald-600 font-bold">【＋新規に入力する】</option>
+            </select>
+            <input type="text" id="start-proj-input" class="w-full px-4 py-3 rounded-lg text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white mt-1 shadow-inner placeholder:text-slate-400" placeholder="新しい業務名を入力">
+        </div>
         
-        <button id="btn-start-survey" class="bg-white text-emerald-800 px-8 py-4 rounded-full font-bold text-lg shadow-lg hover:bg-emerald-50 active:scale-95 transition-all flex items-center gap-2 mb-4">
+        <button id="btn-start-survey" class="bg-white text-emerald-800 px-8 py-4 rounded-full font-bold text-lg shadow-lg hover:bg-emerald-50 active:scale-95 transition-all flex items-center gap-2 mb-2 w-[85%] max-w-sm justify-center">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             本日の調査を開始
         </button>
 
         <button id="btn-resume-survey" class="hidden text-emerald-100 hover:text-white underline text-sm transition-colors pt-2">
             中断したデータから再開する
+        </button>
+
+        <button id="btn-analyze-survey" class="hidden text-emerald-300 hover:text-white underline text-sm transition-colors pt-4 mt-8 border-t border-emerald-600 w-3/4 text-center">
+            過去の調査結果を分析・確認する
+        </button>
+        <button id="btn-manage-logs" class="hidden text-emerald-200 hover:text-white underline text-sm transition-colors pt-4 mt-2 mb-2 w-3/4 text-center">
+            過去の調査全ログを閲覧・消去する
         </button>
     </div>
 
@@ -71,6 +89,11 @@
                     </div>
                 </div>
 
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">業務名 (プロジェクト名)</label>
+                    <input type="text" id="form-project" placeholder="例: 令和5年度 〇〇山生態調査" class="custom-input w-full border border-slate-200 rounded-xl p-3 outline-none text-sm font-bold text-slate-700">
+                </div>
+
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">調査者</label>
@@ -98,14 +121,7 @@
             </div>
         </section>
 
-        <!-- ガイド枠 -->
-        <div class="border border-emerald-100 bg-emerald-50 text-emerald-800 rounded-xl p-4 text-xs leading-relaxed animate-slide-up" style="animation-delay: 0.2s;">
-            <div class="font-bold mb-1 flex items-center gap-1">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                植生タイプの凡例 (代表3種まで)
-            </div>
-            A:落葉広葉樹林 / B:常緑広葉樹林 / C:マツ林 / D:伐採跡地 / E:スギ・ヒノキ幼齢林 / F:スギ・ヒノキ老齢林 / G:スギ・ヒノキ植林(制限等無) / H:草地 / I:カラマツ林 / J:常緑針葉樹林 / K:竹林 / L:その他
-        </div>
+        <!-- ガイド枠は各カード内に移動しました -->
 
         <div class="flex items-center justify-between mt-8 mb-4 animate-slide-up" style="animation-delay: 0.3s;">
             <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -127,18 +143,87 @@
         </button>
 
         <!-- Save & End Actions -->
-        <div class="grid grid-cols-2 gap-4 mt-8 pt-6 border-t border-slate-200">
-            <button type="button" id="btn-suspend" class="py-4 bg-slate-200 text-slate-700 hover:bg-slate-300 font-bold rounded-xl transition-all active:scale-[0.98] flex justify-center items-center gap-2">
+        <div class="grid grid-cols-3 gap-2 mt-8 pt-6 border-t border-slate-200">
+            <button type="button" id="btn-abort" class="py-3 bg-red-50 text-red-600 hover:bg-red-100 font-bold rounded-xl transition-all active:scale-[0.98] flex flex-col justify-center items-center gap-1 text-[11px] sm:text-xs">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                保存せず戻る
+            </button>
+            <button type="button" id="btn-suspend" class="py-3 bg-slate-200 text-slate-700 hover:bg-slate-300 font-bold rounded-xl transition-all active:scale-[0.98] flex flex-col justify-center items-center gap-1 text-[11px] sm:text-xs">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
                 中断し保存
             </button>
-            <button type="button" id="btn-finish" class="py-4 bg-emerald-600 text-white hover:bg-emerald-700 font-bold rounded-xl shadow-[0_8px_16px_rgba(4,120,87,0.2)] transition-all active:scale-[0.98] flex justify-center items-center gap-2">
+            <button type="button" id="btn-finish" class="py-3 bg-emerald-600 text-white hover:bg-emerald-700 font-bold rounded-xl shadow-[0_4px_10px_rgba(4,120,87,0.2)] transition-all active:scale-[0.98] flex flex-col justify-center items-center gap-1 text-[11px] sm:text-xs">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                 終了し保存
             </button>
         </div>
 
     </main>
+    </div>
+
+    <!-- Analysis Modal -->
+    <div id="analysis-modal" class="hidden fixed inset-0 z-[200] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-emerald-600 text-white">
+                <h2 class="text-xl font-bold font-['Outfit']">メッシュ別 調査分析</h2>
+                <button id="btn-close-analysis" class="p-2 hover:bg-emerald-700 rounded-full transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-4 bg-slate-50 border-b border-slate-100 flex flex-col gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">対象業務名</label>
+                    <select id="analysis-project-select" class="custom-input w-full border border-slate-300 rounded-lg p-3 outline-none focus:border-emerald-500 bg-white shadow-sm font-bold text-slate-700 text-sm"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">対象メッシュNo.</label>
+                    <select id="analysis-mesh-select" class="custom-input w-full border border-slate-300 rounded-lg p-3 outline-none focus:border-emerald-500 bg-white shadow-sm font-bold text-slate-700 text-sm disabled:opacity-50"></select>
+                </div>
+            </div>
+            <div id="analysis-content" class="p-4 overflow-y-auto flex-1 space-y-6">
+                <!-- Data dynamically populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Management Modal -->
+    <div id="log-manage-modal" class="hidden fixed inset-0 z-[200] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-800 text-white">
+                <h2 class="text-xl font-bold font-['Outfit']">過去ログ閲覧・管理</h2>
+                <button id="btn-close-log-manage" class="p-2 hover:bg-slate-700 rounded-full transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-4 bg-slate-50 border-b border-slate-100 flex flex-col gap-3">
+                <div class="flex justify-between items-end">
+                    <div>
+                        <p class="text-sm text-slate-800 font-bold mb-1">保存データ管理</p>
+                        <p class="text-xs text-slate-500 mb-1">消去したいデータにチェックを入れて「選択消去」を押してください。</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-500 whitespace-nowrap">業務名で絞り込み:</span>
+                    <select id="log-manage-project-filter" class="custom-input flex-1 border border-slate-300 rounded-lg p-2 outline-none focus:border-emerald-500 bg-white shadow-sm font-bold text-slate-700 text-sm">
+                        <option value="">すべての業務を表示</option>
+                    </select>
+                </div>
+                <div class="text-xs text-slate-500 font-bold text-right border-t border-slate-200 pt-2">表示中: <span id="log-count-display">0</span> 件</div>
+            </div>
+            <div id="log-list-container" class="p-4 overflow-y-auto flex-1 space-y-3 bg-slate-100/50">
+                <!-- Log cards dynamically inserted here -->
+            </div>
+            <div class="p-4 bg-white border-t border-slate-100 flex justify-between items-center">
+                <label class="flex items-center gap-2 cursor-pointer text-sm font-bold text-slate-600 select-none">
+                    <input type="checkbox" id="log-select-all" class="w-5 h-5 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500 cursor-pointer">
+                    <span>すべて選択</span>
+                </label>
+                <button id="btn-delete-logs" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 px-6 rounded-lg shadow-sm transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    選択したデータを消去
+                </button>
+            </div>
+        </div>
     </div>
 
     <script src="app.js"></script>

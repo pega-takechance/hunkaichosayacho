@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             <div class="space-y-6">
                 <!-- 植生・下層植生 -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-4">
                     <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col">
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-2">植生タイプ <span class="text-[10px] text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded">最大3種</span></label>
                         <div class="grid grid-cols-6 gap-1.5 flex-1">
@@ -57,9 +57,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </label>
                             `).join('')}
                         </div>
+                        <div class="mt-3 text-sm text-slate-500 leading-tight bg-white p-2 rounded border border-slate-100">
+                            <span class="font-bold text-emerald-700">凡例:</span> A:落葉広葉樹林 B:常緑広葉樹林 C:マツ林 D:伐採跡地 E:スギ・ヒノキ幼齢林 F:スギ・ヒノキ老齢林 G:スギ・ヒノキ植林(制限無) H:草地 I:カラマツ林 J:常緑針葉樹林 K:竹林 L:その他
+                        </div>
                     </div>
                     
                     <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col justify-center space-y-3">
+                        <label class="block text-xs font-bold text-slate-500 uppercase">下層植生</label>
                         <div class="flex items-center gap-2">
                             <span class="text-xs font-bold text-slate-500 w-10">一般</span>
                             <div class="flex flex-1 gap-1 radio-group h-8">
@@ -279,6 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // -------------------------
     const collectData = () => {
         const dateVal = document.getElementById('form-date').value;
+        const projectName = document.getElementById('form-project')?.value || "";
         const timeStart = document.getElementById('form-time-start').value;
         const timeEnd = document.getElementById('form-time-end').value;
         const surveyor = document.getElementById('form-surveyor').value;
@@ -318,13 +323,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         return {
-            dateVal, timeStart, timeEnd, surveyor, weather, meshNo, impossible, areaData
+            dateVal, projectName, timeStart, timeEnd, surveyor, weather, meshNo, impossible, areaData
         };
     };
 
     const loadData = (data) => {
         if (!data) return;
         if (data.dateVal) document.getElementById('form-date').value = data.dateVal;
+        if (data.projectName !== undefined && document.getElementById('form-project')) document.getElementById('form-project').value = data.projectName;
         if (data.timeStart) document.getElementById('form-time-start').value = data.timeStart;
         if (data.timeEnd) document.getElementById('form-time-end').value = data.timeEnd;
         if (data.surveyor) document.getElementById('form-surveyor').value = data.surveyor;
@@ -379,12 +385,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const doExportExcel = (dataObj) => {
-        const { dateVal, timeStart, timeEnd, surveyor, weather, meshNo, impossible, areaData } = dataObj;
+        const { dateVal, projectName, timeStart, timeEnd, surveyor, weather, meshNo, impossible, areaData } = dataObj;
         
         const wsData = [
             {"A": "様式1-2 ニホンジカ糞塊密度調査票"},
             {},
             {"A": "調査日", "B": dateVal},
+            {"A": "業務名", "B": projectName || "未設定"},
             {"A": "時刻", "B": timeStart + " ~ " + timeEnd},
             {"A": "調査者", "B": surveyor},
             {"A": "天気", "B": weather},
@@ -420,6 +427,58 @@ document.addEventListener('DOMContentLoaded', () => {
 
         XLSX.utils.book_append_sheet(wb, ws, "ニホンジカ糞塊密度調査票");
 
+        // --- Create Analysis Summary Sheet ---
+        let c = {
+            veg: {'A':0,'B':0,'C':0,'D':0,'E':0,'F':0,'G':0,'H':0,'I':0,'J':0,'K':0,'L':0},
+            underGen: {'極多':0,'多い':0,'少ない':0,'なし':0},
+            underSasa: {'多い':0,'少ない':0,'なし':0},
+            sika: { sight: 0, foot: 0, vocal: 0 },
+            dungO: { new: 0, med: 0, old: 0 },
+            dungU: { new: 0, med: 0, old: 0 }
+        };
+
+        areaData.forEach(area => {
+            const vegArr = area["植生タイプ"].split(', ').filter(v => v);
+            vegArr.forEach(v => { if (c.veg[v] !== undefined) c.veg[v]++; });
+            if (c.underGen[area["下層植生(一般)"]] !== undefined) c.underGen[area["下層植生(一般)"]]++;
+            if (c.underSasa[area["下層植生(ササ)"]] !== undefined) c.underSasa[area["下層植生(ササ)"]]++;
+            c.sika.sight += parseInt(area["生体:目撃"]) || 0;
+            c.sika.foot += parseInt(area["生体:足跡"]) || 0;
+            c.sika.vocal += parseInt(area["生体:鳴声"]) || 0;
+            c.dungO.new += parseInt(area["糞塊10+:新"]) || 0;
+            c.dungO.med += parseInt(area["糞塊10+:中"]) || 0;
+            c.dungO.old += parseInt(area["糞塊10+:旧"]) || 0;
+            c.dungU.new += parseInt(area["糞塊10-:新"]) || 0;
+            c.dungU.med += parseInt(area["糞塊10-:中"]) || 0;
+            c.dungU.old += parseInt(area["糞塊10-:旧"]) || 0;
+        });
+
+        const wsDataAnalysis = [
+            {"A": "■ メッシュ単位集計結果", "B": "業務名:", "C": projectName || "未設定", "D": "メッシュNo:", "E": meshNo},
+            {},
+            {"A": "【植生タイプ出現数】"},
+            {"A": "A", "B": "B", "C": "C", "D": "D", "E": "E", "F": "F", "G": "G", "H": "H", "I": "I", "J": "J", "K": "K", "L": "L"},
+            {"A": c.veg['A'], "B": c.veg['B'], "C": c.veg['C'], "D": c.veg['D'], "E": c.veg['E'], "F": c.veg['F'], "G": c.veg['G'], "H": c.veg['H'], "I": c.veg['I'], "J": c.veg['J'], "K": c.veg['K'], "L": c.veg['L']},
+            {},
+            {"A": "【下層植生カウント】"},
+            {"A": "区分", "B": "極多", "C": "多い", "D": "少ない", "E": "なし"},
+            {"A": "一般", "B": c.underGen['極多'], "C": c.underGen['多い'], "D": c.underGen['少ない'], "E": c.underGen['なし']},
+            {"A": "ササ", "B": "-", "C": c.underSasa['多い'], "D": c.underSasa['少ない'], "E": c.underSasa['なし']},
+            {},
+            {"A": "【シカ生体 カウント】"},
+            {"A": "項目", "B": "目撃", "C": "足跡", "D": "鳴声"},
+            {"A": "シカ生体", "B": c.sika.sight, "C": c.sika.foot, "D": c.sika.vocal},
+            {},
+            {"A": "【シカ糞塊 カウント】"},
+            {"A": "項目", "B": "新", "C": "中", "D": "旧"},
+            {"A": "糞塊10+", "B": c.dungO.new, "C": c.dungO.med, "D": c.dungO.old},
+            {"A": "糞塊10-", "B": c.dungU.new, "C": c.dungU.med, "D": c.dungU.old}
+        ];
+
+        const ws2 = XLSX.utils.json_to_sheet(wsDataAnalysis, {skipHeader: true});
+        XLSX.utils.book_append_sheet(wb, ws2, "集計分析表");
+        // ----------------------------------------
+
         let filename = "糞塊密度調査_";
         if (dateVal) filename += dateVal.replace(/-/g, "");
         else filename += "未設定";
@@ -431,6 +490,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // -------------------------
     // Save & Flow Actions
     // -------------------------
+    document.getElementById('btn-abort')?.addEventListener('click', () => {
+        if(confirm('入力中のデータを保存せずに破棄してスタート画面に戻ります。\\nよろしいですか？')) {
+            localStorage.removeItem('sikaSurveySave');
+            window.location.reload();
+        }
+    });
+
     document.getElementById('btn-suspend')?.addEventListener('click', () => {
         const data = collectData();
         localStorage.setItem('sikaSurveySave', JSON.stringify(data));
@@ -441,27 +507,69 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-finish')?.addEventListener('click', () => {
         const data = collectData();
         doExportExcel(data);
+
+        // --- Save to historical DB ---
+        const dbStr = localStorage.getItem('sikaSurveyDB');
+        const db = dbStr ? JSON.parse(dbStr) : [];
+        data.savedAt = new Date().toISOString();
+        db.push(data);
+        localStorage.setItem('sikaSurveyDB', JSON.stringify(db));
+        // -----------------------------
+
         localStorage.removeItem('sikaSurveySave');
         setTimeout(() => {
-            if(confirm('調査を終了しました。新しい調査を始めますか？')) {
-                window.location.reload();
-            }
-        }, 1000);
+            alert('調査データを保存し、終了しました。\\nスタート画面に戻ります。');
+            window.location.reload();
+        }, 100);
     });
 
     // -------------------------
-    // Start Screen Logic
+    // Start Screen & Analysis
     // -------------------------
     const startScreen = document.getElementById('start-screen');
     const mainApp = document.getElementById('main-app');
     const resumeBtn = document.getElementById('btn-resume-survey');
     const startBtn = document.getElementById('btn-start-survey');
 
+    // Analysis elements
+    const analyzeBtn = document.getElementById('btn-analyze-survey');
+    const analysisModal = document.getElementById('analysis-modal');
+    const closeAnalysisBtn = document.getElementById('btn-close-analysis');
+    const meshSelect = document.getElementById('analysis-mesh-select');
+    const analysisContent = document.getElementById('analysis-content');
+
     if (startScreen && mainApp) {
         const savedDataStr = localStorage.getItem('sikaSurveySave');
         if (savedDataStr) {
             resumeBtn.classList.remove('hidden');
         }
+
+        const surveyDBStr = localStorage.getItem('sikaSurveyDB');
+        const surveyDB = surveyDBStr ? JSON.parse(surveyDBStr) : [];
+        if (surveyDB.length > 0) {
+            if (analyzeBtn) analyzeBtn.classList.remove('hidden');
+            if (document.getElementById('btn-manage-logs')) document.getElementById('btn-manage-logs').classList.remove('hidden');
+        }
+
+        const extractedProjects = [...new Set(surveyDB.map(s => (s.projectName && s.projectName.trim() !== '') ? s.projectName : '業務設定なし'))];
+        const startProjSelect = document.getElementById('start-proj-select');
+        const startProjInput = document.getElementById('start-proj-input');
+        if (startProjSelect && extractedProjects.length > 0) {
+            startProjSelect.innerHTML = extractedProjects.map(p => `<option value="${p}">${p}</option>`).join('') + `<option value="NEW" class="text-emerald-600 font-bold">【＋新規に入力する】</option>`;
+            startProjSelect.value = extractedProjects[0];
+            if (startProjInput) startProjInput.classList.add('hidden');
+        }
+
+        startProjSelect?.addEventListener('change', (e) => {
+            if (e.target.value === 'NEW') {
+                if (startProjInput) {
+                    startProjInput.classList.remove('hidden');
+                    startProjInput.focus();
+                }
+            } else {
+                if (startProjInput) startProjInput.classList.add('hidden');
+            }
+        });
 
         const showMainApp = () => {
             startScreen.style.opacity = '0';
@@ -477,7 +585,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             localStorage.removeItem('sikaSurveySave');
+            
+            const startProjSelect = document.getElementById('start-proj-select');
+            const startProjInput = document.getElementById('start-proj-input');
+            const targetProjForm = document.getElementById('form-project');
+            if (startProjSelect && targetProjForm) {
+                if (startProjSelect.value === 'NEW') {
+                    targetProjForm.value = startProjInput ? startProjInput.value : '';
+                } else {
+                    targetProjForm.value = startProjSelect.value;
+                }
+            }
+            
             showMainApp();
+            addAreaCard();
         });
 
         resumeBtn.addEventListener('click', () => {
@@ -490,6 +611,262 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('データの読み込みに失敗しました。新規で開始します。');
                 showMainApp();
             }
+        });
+
+        // Analysis Modal interactions
+        const projectSelect = document.getElementById('analysis-project-select');
+        
+        analyzeBtn?.addEventListener('click', () => {
+            const currentDBStr = localStorage.getItem('sikaSurveyDB');
+            const currentDB = currentDBStr ? JSON.parse(currentDBStr) : [];
+            
+            analysisModal.classList.remove('hidden');
+            // Extract unique projects
+            const projects = [...new Set(currentDB.map(s => (s.projectName && s.projectName.trim() !== '') ? s.projectName : '業務設定なし'))];
+            if (projectSelect) {
+                projectSelect.innerHTML = `<option value="">-- 対象業務を選択 --</option>` + 
+                    projects.map(p => `<option value="${p}">${p}</option>`).join('');
+            }
+            meshSelect.innerHTML = `<option value="">-- メッシュを選択 --</option>`;
+            meshSelect.disabled = true;
+            analysisContent.innerHTML = '<div class="text-slate-400 text-center py-8">対象業務を選択してください</div>';
+        });
+
+        closeAnalysisBtn?.addEventListener('click', () => {
+            analysisModal.classList.add('hidden');
+        });
+
+        projectSelect?.addEventListener('change', () => {
+            const pSel = projectSelect.value;
+            if (!pSel) {
+                meshSelect.innerHTML = `<option value="">-- メッシュを選択 --</option>`;
+                meshSelect.disabled = true;
+                analysisContent.innerHTML = '<div class="text-slate-400 text-center py-8">対象業務を選択してください</div>';
+                return;
+            }
+
+            const currentDBStr = localStorage.getItem('sikaSurveyDB');
+            const currentDB = currentDBStr ? JSON.parse(currentDBStr) : [];
+            const filteredByProject = currentDB.filter(s => ((s.projectName && s.projectName.trim() !== '') ? s.projectName : '業務設定なし') === pSel);
+            
+            const meshes = [...new Set(filteredByProject.map(s => (s.meshNo && s.meshNo.trim() !== '') ? s.meshNo : '名称未設定'))];
+            meshSelect.innerHTML = `<option value="">-- メッシュを選択 --</option>` + 
+                meshes.map(m => `<option value="${m}">${m}</option>`).join('');
+            meshSelect.disabled = false;
+            analysisContent.innerHTML = '<div class="text-slate-400 text-center py-8">メッシュを選択してください</div>';
+        });
+
+        meshSelect?.addEventListener('change', () => {
+            const pSel = projectSelect ? projectSelect.value : null;
+            const mSel = meshSelect.value;
+            if (!mSel) {
+                analysisContent.innerHTML = '<div class="text-slate-400 text-center py-8">メッシュを選択してください</div>';
+                return;
+            }
+
+            const currentDBStr = localStorage.getItem('sikaSurveyDB');
+            const currentDB = currentDBStr ? JSON.parse(currentDBStr) : [];
+            const filtered = currentDB.filter(s => {
+                const checkProj = pSel ? (((s.projectName && s.projectName.trim() !== '') ? s.projectName : '業務設定なし') === pSel) : true;
+                const checkMesh = ((s.meshNo && s.meshNo.trim() !== '') ? s.meshNo : '名称未設定') === mSel;
+                return checkProj && checkMesh;
+            });
+            
+            let c = {
+                veg: {'A':0,'B':0,'C':0,'D':0,'E':0,'F':0,'G':0,'H':0,'I':0,'J':0,'K':0,'L':0},
+                underGen: {'極多':0,'多い':0,'少ない':0,'なし':0},
+                underSasa: {'多い':0,'少ない':0,'なし':0},
+                sika: { sight: 0, foot: 0, vocal: 0 },
+                dungO: { new: 0, med: 0, old: 0 },
+                dungU: { new: 0, med: 0, old: 0 }
+            };
+
+            let totalCards = 0;
+
+            filtered.forEach(survey => {
+                survey.areaData.forEach(area => {
+                    totalCards++;
+                    const vegArr = area["植生タイプ"].split(', ').filter(v => v);
+                    vegArr.forEach(v => { if (c.veg[v] !== undefined) c.veg[v]++; });
+                    if (c.underGen[area["下層植生(一般)"]] !== undefined) c.underGen[area["下層植生(一般)"]]++;
+                    if (c.underSasa[area["下層植生(ササ)"]] !== undefined) c.underSasa[area["下層植生(ササ)"]]++;
+                    c.sika.sight += parseInt(area["生体:目撃"]) || 0;
+                    c.sika.foot += parseInt(area["生体:足跡"]) || 0;
+                    c.sika.vocal += parseInt(area["生体:鳴声"]) || 0;
+                    c.dungO.new += parseInt(area["糞塊10+:新"]) || 0;
+                    c.dungO.med += parseInt(area["糞塊10+:中"]) || 0;
+                    c.dungO.old += parseInt(area["糞塊10+:旧"]) || 0;
+                    c.dungU.new += parseInt(area["糞塊10-:新"]) || 0;
+                    c.dungU.med += parseInt(area["糞塊10-:中"]) || 0;
+                    c.dungU.old += parseInt(area["糞塊10-:旧"]) || 0;
+                });
+            });
+
+            analysisContent.innerHTML = `
+                <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-100 mb-6">
+                    <div class="text-emerald-800 font-bold mb-1">サマリー</div>
+                    <div class="text-sm text-emerald-600 mb-1">業務: ${pSel || '未指定'} / メッシュ: ${mSel}</div>
+                    <div class="text-xs text-emerald-600/80">合致する調査データ: ${filtered.length}件 / 合計区域数: ${totalCards}区画</div>
+                </div>
+
+                <h3 class="font-bold border-l-4 border-slate-400 pl-2 text-slate-700 mb-2">植生タイプ出現数</h3>
+                <div class="grid grid-cols-4 sm:grid-cols-6 gap-2 text-sm text-center mb-6">
+                    ${Object.entries(c.veg).map(([k,v]) => `<div class="bg-white py-2 rounded shadow-sm border border-slate-100"><span class="font-bold text-slate-500">${k}</span><br><span class="text-lg font-bold text-slate-800">${v}</span></div>`).join('')}
+                </div>
+
+                <h3 class="font-bold border-l-4 border-slate-400 pl-2 text-slate-700 mb-2">下層植生カウント</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                    <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-100 text-sm">
+                        <div class="font-bold text-slate-500 mb-2 border-b border-slate-100 pb-1">一般</div>
+                        <div class="flex justify-between py-1"><span>極多</span><span class="font-bold">${c.underGen['極多']}</span></div>
+                        <div class="flex justify-between py-1 border-t border-slate-50"><span>多い</span><span class="font-bold">${c.underGen['多い']}</span></div>
+                        <div class="flex justify-between py-1 border-t border-slate-50"><span>少ない</span><span class="font-bold">${c.underGen['少ない']}</span></div>
+                        <div class="flex justify-between py-1 border-t border-slate-50 text-slate-400"><span>なし</span><span class="font-bold">${c.underGen['なし']}</span></div>
+                    </div>
+                    <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-100 text-sm">
+                        <div class="font-bold text-slate-500 mb-2 border-b border-slate-100 pb-1">ササ</div>
+                        <div class="flex justify-between py-1 border-t border-slate-50"><span>多い</span><span class="font-bold">${c.underSasa['多い']}</span></div>
+                        <div class="flex justify-between py-1 border-t border-slate-50"><span>少ない</span><span class="font-bold">${c.underSasa['少ない']}</span></div>
+                        <div class="flex justify-between py-1 border-t border-slate-50 text-slate-400"><span>なし</span><span class="font-bold">${c.underSasa['なし']}</span></div>
+                    </div>
+                </div>
+
+                <h3 class="font-bold border-l-4 border-emerald-500 pl-2 text-slate-700 mb-2">シカ生体 (カウント)</h3>
+                <div class="overflow-x-auto bg-white shadow-sm border border-slate-200 rounded-lg mb-6">
+                    <table class="w-full text-sm text-left whitespace-nowrap">
+                        <thead class="bg-slate-50 text-slate-500 uppercase border-b border-slate-200">
+                            <tr><th class="px-4 py-3">項目</th><th class="px-4 py-3 text-right">目撃</th><th class="px-4 py-3 text-right">足跡</th><th class="px-4 py-3 text-right">鳴声</th></tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
+                            <tr><td class="px-4 py-3 font-bold text-emerald-700">シカ生体</td><td class="px-4 py-3 text-right font-bold">${c.sika.sight}</td><td class="px-4 py-3 text-right font-bold">${c.sika.foot}</td><td class="px-4 py-3 text-right font-bold">${c.sika.vocal}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 class="font-bold border-l-4 border-orange-400 pl-2 text-slate-700 mb-2">シカ糞塊 (カウント)</h3>
+                <div class="overflow-x-auto bg-white shadow-sm border border-slate-200 rounded-lg">
+                    <table class="w-full text-sm text-left whitespace-nowrap">
+                        <thead class="bg-slate-50 text-slate-500 uppercase border-b border-slate-200">
+                            <tr><th class="px-4 py-3">項目</th><th class="px-4 py-3 text-right">新</th><th class="px-4 py-3 text-right">中</th><th class="px-4 py-3 text-right">旧</th></tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
+                            <tr><td class="px-4 py-3 font-bold text-orange-600">糞塊 (10粒以上)</td><td class="px-4 py-3 text-right font-bold">${c.dungO.new}</td><td class="px-4 py-3 text-right font-bold">${c.dungO.med}</td><td class="px-4 py-3 text-right font-bold">${c.dungO.old}</td></tr>
+                            <tr><td class="px-4 py-3 font-bold text-amber-500">糞塊 (10粒未満)</td><td class="px-4 py-3 text-right font-bold">${c.dungU.new}</td><td class="px-4 py-3 text-right font-bold">${c.dungU.med}</td><td class="px-4 py-3 text-right font-bold">${c.dungU.old}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        });
+
+        // -------------------------
+        // Log Management Handlers
+        // -------------------------
+        const manageLogsBtn = document.getElementById('btn-manage-logs');
+        const logManageModal = document.getElementById('log-manage-modal');
+        const closeLogManageBtn = document.getElementById('btn-close-log-manage');
+        const logListContainer = document.getElementById('log-list-container');
+        const btnDeleteLogs = document.getElementById('btn-delete-logs');
+        const cbSelectAll = document.getElementById('log-select-all');
+        const logCountDisplay = document.getElementById('log-count-display');
+        const logFilterProject = document.getElementById('log-manage-project-filter');
+
+        const updateDeleteBtnState = () => {
+            if (!btnDeleteLogs) return;
+            const checkeds = document.querySelectorAll('.log-cb:checked');
+            btnDeleteLogs.disabled = checkeds.length === 0;
+            if (cbSelectAll) {
+                const total = document.querySelectorAll('.log-cb').length;
+                cbSelectAll.checked = (total > 0 && checkeds.length === total);
+            }
+        };
+
+        const refreshLogList = () => {
+            const currentDBStr = localStorage.getItem('sikaSurveyDB');
+            const currentDB = currentDBStr ? JSON.parse(currentDBStr) : [];
+            const filterVal = logFilterProject ? logFilterProject.value : '';
+
+            if (logFilterProject && (logFilterProject.options.length <= 1 || logFilterProject.getAttribute('data-loaded') !== 'true')) {
+                const uniqueP = [...new Set(currentDB.map(s => (s.projectName && s.projectName.trim() !== '') ? s.projectName : '業務設定なし'))];
+                logFilterProject.innerHTML = `<option value="">すべての業務を表示</option>` + uniqueP.map(p => `<option value="${p}">${p}</option>`).join('');
+                logFilterProject.value = filterVal;
+                logFilterProject.setAttribute('data-loaded', 'true');
+            }
+
+            let filteredDB = currentDB;
+            if (filterVal) {
+                filteredDB = currentDB.filter(s => ((s.projectName && s.projectName.trim() !== '') ? s.projectName : '業務設定なし') === filterVal);
+            }
+
+            if(logCountDisplay) logCountDisplay.textContent = filteredDB.length;
+            if(cbSelectAll) cbSelectAll.checked = false;
+            
+            if (filteredDB.length === 0) {
+                if(logListContainer) logListContainer.innerHTML = '<div class="text-slate-400 text-center py-8">該当するログはありません</div>';
+                if(btnDeleteLogs) btnDeleteLogs.disabled = true;
+                return;
+            }
+
+            // Sort by savedAt descending
+            const sortedDB = [...filteredDB].sort((a,b) => new Date(b.savedAt) - new Date(a.savedAt));
+
+            if(logListContainer) {
+                logListContainer.innerHTML = sortedDB.map(l => {
+                    const pName = l.projectName || '業務名未設定';
+                    const mNo = l.meshNo || 'メッシュ未設定';
+                    const d = new Date(l.savedAt);
+                    const textDate = l.dateVal || '日付未設定';
+                    const saveTime = d.toLocaleString('ja-JP');
+                    return `
+                        <label class="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 cursor-pointer hover:border-emerald-300 transition-colors">
+                            <input type="checkbox" value="${l.savedAt}" class="log-cb w-5 h-5 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500">
+                            <div class="flex-1">
+                                <div class="text-sm font-bold text-slate-800">${pName} <span class="text-slate-400 font-normal ml-2 text-[10px]">${textDate}</span></div>
+                                <div class="text-[11px] text-slate-500 mt-1">メッシュ:<span class="font-bold text-emerald-600">${mNo}</span> / 区画:${l.areaData.length} / 保存:${saveTime}</div>
+                            </div>
+                        </label>
+                    `;
+                }).join('');
+            }
+            
+            updateDeleteBtnState();
+            
+            document.querySelectorAll('.log-cb').forEach(cb => {
+                cb.addEventListener('change', updateDeleteBtnState);
+            });
+        };
+
+        logFilterProject?.addEventListener('change', refreshLogList);
+
+        cbSelectAll?.addEventListener('change', (e) => {
+            document.querySelectorAll('.log-cb').forEach(cb => cb.checked = e.target.checked);
+            updateDeleteBtnState();
+        });
+
+        manageLogsBtn?.addEventListener('click', () => {
+            logManageModal?.classList.remove('hidden');
+            refreshLogList();
+        });
+
+        closeLogManageBtn?.addEventListener('click', () => {
+            logManageModal?.classList.add('hidden');
+            const afterDBStr = localStorage.getItem('sikaSurveyDB');
+            if (afterDBStr === '[]' || !afterDBStr) {
+                if (analyzeBtn) analyzeBtn.classList.add('hidden');
+                if (manageLogsBtn) manageLogsBtn.classList.add('hidden');
+            }
+        });
+
+        btnDeleteLogs?.addEventListener('click', () => {
+            const checkeds = document.querySelectorAll('.log-cb:checked');
+            if (checkeds.length === 0) return;
+            if (!confirm(`選択した ${checkeds.length} 件の調査データを完全に消去しますか？\n（この操作は元に戻せません）`)) return;
+
+            const toDelete = Array.from(checkeds).map(cb => cb.value);
+            const currentDBStr = localStorage.getItem('sikaSurveyDB');
+            const currentDB = currentDBStr ? JSON.parse(currentDBStr) : [];
+            const newDB = currentDB.filter(item => !toDelete.includes(item.savedAt));
+            localStorage.setItem('sikaSurveyDB', JSON.stringify(newDB));
+            refreshLogList();
         });
     }
 });
